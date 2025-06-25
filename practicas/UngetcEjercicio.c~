@@ -1,0 +1,39 @@
+#include <stdio.h>
+#include <ctype.h>
+
+int main()
+{
+	int in_char;
+	FILE *my_stream;
+	char *my_string=NULL;
+	size_t nchars =0;
+
+	my_stream=fopen("UngetcEjercicio", "w");
+	printf("		Here's some non-whitespace.\n");
+	puts("la linea anterior se escribe tal cual y en archivo y se elminan los espacios en blanco");
+	fprintf(my_stream, "		Here's some non-whitespace.\n");
+	/*Cerrar stream*/
+	if(fclose(my_stream) != 0)
+		puts("Error al cerrar el archivo");
+	else
+		puts("Cerrado exitosamente");
+	my_stream=fopen("UngetcEjercicio","r");
+	/*Ignorar todos los espacios en blanco*/
+	do
+		in_char=getc(my_stream);
+	while(isspace(in_char));
+	/*Regresamos al primer caracter que no es un espacio en blanco*/
+	ungetc(in_char, my_stream);
+	
+	getline(&my_string, &nchars, my_stream);
+
+	/*Cerramos el Archivo*/
+	if(fclose(my_stream) != 0)
+		puts("Error al cerrar el archivo");
+	else
+		puts("Cerrado exitosamente");
+	printf("String read: \n");
+	printf("%s", my_string);
+
+	return 0;
+}

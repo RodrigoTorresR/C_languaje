@@ -1,0 +1,29 @@
+#include <stdio.h>
+#include <stdlib.h> //para el uso de Malloc()
+int main()
+{
+	int bytes_read;
+	int nbytes=100;
+	char *my_string;
+	FILE *my_stream;
+	my_stream = fopen("getlinearchivo", "w+");
+
+	puts("Escriba una linea de texto:");
+	/*Estas 2 lineas son el corazon del programa*/
+	my_string=(char *)malloc (nbytes +1); //agregamos un espacio para el caracter \n
+	bytes_read=getline (&my_string, &nbytes, stdin); //leeremos del flujo entrada estandar
+	if(bytes_read == 1)
+		puts("ERROR!");
+	else
+	{
+		puts("Tecleaste lo siguiente:");
+		puts(my_string);
+		fprintf(my_stream, my_string);	
+	}
+	if (fclose(my_stream) != 0)
+		puts("Archivo no pudo ser cerrado");
+	else
+		puts("Archivo cerrado correctamente");
+	return 0;
+}
+		

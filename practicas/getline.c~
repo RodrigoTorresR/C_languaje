@@ -1,0 +1,23 @@
+#include <stdio.h>
+#include <stdlib.h> //para el uso de Malloc()
+int main()
+{
+	int bytes_read;
+	int nbytes=100;
+	char *my_string;
+
+	puts("Please enter a line of text:");
+	/*Estas 2 lineas son el corazon del programa*/
+	my_string=(char *)malloc (nbytes +1); //agregamos un espacio para el caracter \n
+	bytes_read=getline (&my_string, &nbytes, stdin); //leeremos del flujo entrada estandar
+	
+	if(bytes_read == 1)
+		puts("ERROR!");
+	else
+	{
+		puts("Tecleaste lo siguiente:");
+		puts(my_string);
+	}
+	return 0;
+}
+		
