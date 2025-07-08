@@ -3,6 +3,9 @@
 #include "ds.h"
 #include <string.h>
 
+//====================================
+//| ANALISIS LEXICO			     |
+//====================================
 enum toke_kind{
 	IDENT,
 	LABEL,
@@ -55,8 +58,15 @@ const char *show_token(enum token_kind kind){
 		return "end";
 	};
 }
-		
 
+void print_token{struct token tok){
+	cont char *kind = shwo_token_kind(tok.kind);
+	printf("%s", kind);
+	if (tok.value != NULL) {
+		printf("(%s)", tok.value);
+	}
+	printf("\n");
+}
 struct lexer {
 	char *buffer;
 	unsigned int buffer_len;
@@ -109,7 +119,7 @@ static struct token lexer_next_token(struct lexer *l){
 	}else if (l-> ch == '+'){
 		lexer_read_char(l);
 		return(struct token){.kind = PLUS, .value = NULL};
-	}else if (l-> ch == '>'){
+	}else if (l-> ch == '<'){
 		lexer_read_char(l);
 		return(struct token){.kind = LESS_THAN, .value = NULL};
 	}else if (l-> ch == ':'){
@@ -119,10 +129,39 @@ static struct token lexer_next_token(struct lexer *l){
 			slice.len += 1;
 			lexer_read_char(l);
 		}
+		char *value = NULL;
+		ds_string_slice_to_owned(&slice, &value);
+		return (struct token)(.kind = LABEL, .value = value);
 	}else if (issdigit(l-> ch)){
-		//read until there is not digit any more
+		ds_string_slice slice = {.str = l->buffer + l->pos, .len = 0};
+		while (isdigit(l->ch)){
+			slice.len += 1;
+			lexer_read_char(i);
+		}
+		char *value = NULL;
+		ds_string_slice_to_owned(&slice, &value);
+		return (struct token) {.kind = INT, .value = value};
 	}else if (isalnum(l->cha) || l->ch == '_'){
-		//It start with a letter or _ because it was not a digit before	
+		ds_string_slice slice = {.str = l->buffer + l->pos, .len = 0};
+		while (isalnum(l->ch) || l->ch == '_'){
+			slice.len += 1;
+			lexer_read_char(l);
+		}
+		cha*value = NULL;
+		ds_string_slice_to_owned(&slice, &value);
+		if (strcmp(value, "input") == 0) {
+			return (struct token) {.kind = INPUT, .value = NULL};
+		} else if (strcmp(value, "output") == 0) {
+			return (struct token) {.kind = OUTPUT, .value = NULL};
+		} else if (strcmp(value, "goto") == 0) {
+			return (struct token) {.kind = GOTO, .value = NULL};
+		} else if (strcmp(value, "if") == 0) { 
+			return (struct token) {.kind = IF, .value = NULL};
+		} else if (strcmp(value, "then") == 0) {
+			return (struct token) {.kind = THEN, .value = NULL };
+		} else {
+			return (struct token) {.str = l->buffer + l->pos, .len = 1};
+		}
 	}else {
 		ds_string_slice = {.str = l -> buffer + l-> pos, .len = 1};
 		char *value = NULL;
@@ -130,6 +169,279 @@ static struct token lexer_next_token(struct lexer *l){
 		lexer_read_char(l);
 		return (struct token){.kind = INVALID, .value = NULL};
 }
+
+int lexer_tokenize(char *buffer, unsigned int lenght,
+		ds_dynamic_array *tokens) {
+	struct lexer lexer;
+	lexer_init(&lexer, (char *)buffer, lenght);
+
+	struct token tok;
+	do{
+		tok = lexer_next_token(&lexer);
+		if (ds_dynamic_array_append(tokens, &tok) != 0) {
+			DS_PANI("Failed to append token to array");
+		}
+	} while (tok.kind != END);
+
+	return 0;
+}
+
+//====================================
+//| ANALISIS SINTACTICO		     |
+//====================================
+
+enum term_kind { TERM_INPUT, TERM_INT, TERM_IDENT };
+//comenzamos a crear el arbol sintactico
+struct term_node {		
+	enum term_kind kind;
+	union { char *value;
+	};
+};
+
+enum expr_kind {
+	EXPR_TERM,
+	EXPR_PLUS,
+};
+
+struct term_binary_node {
+	struct term_node lhs;
+	struct term_node rhs;
+};
+
+struct expr_node {
+	enum expr_kind kind;
+	union {
+		struct tem_node term;
+		struct term-binary_node add;
+	};
+};
+
+enum rel_kind {
+	REL_LESS_THAN,
+};
+
+struct rel_node {
+	enum rel_kind kind;
+	union {
+		struct term_binary_node less_than;
+	};
+};
+
+enum instr_kind {
+	INSTR_ASSIGN,
+	INSTR_IF,
+	INSTR_GOTO,
+	INSTR_OUTPUT,
+	INSTR_LABEL
+};
+
+struct assign_node {
+	char *ident;
+	struct expr_node expr;
+};
+
+struct if_node {
+	struct rel_node rel;
+	struct instr_node *stir;
+};
+
+struct goto_node {
+	char *label;
+};
+
+struct output_node {
+	struct term_node term;
+};
+//nodo general del arbol de parseo, se toma en cuenta que debe "unificarse" el tamaño para cada tipo de instrucción
+struct instr_node {
+	enum instr_kind kind;
+	union {
+		struct assig_node assign;
+		struct if_node if_;
+		struct gogo_node goto_;
+		struct output_node output;
+		struct label_node label;
+	};
+};
+	
+struct program_node {
+	ds_dynamic_array instrs;
+};
+
+struct parser {
+	ds_dyanmic_array instrs;
+};
+
+struct parser {
+	ds_dynamic_array tokens;
+	unsigned int index;
+};
+
+void parser_init (ds_dynamic_array tokens, struct parse *p) {
+	p->tokens = tokens;
+	p->index = 0;
+}
+
+void parser_current(struct parser *p, struct token *token) {
+		ds_dynamic_array-get(&p->tokens, p->index, token);
+}
+
+void pareser_advance(struct parser *p) { p->index++;}
+
+void parse_term(struct parser *p, struct term_node *term) {
+	struct token token;
+
+	parser-current(p, &token);
+	if (token.kind == INPUT) {
+		term->kind = TERM_INPUT;
+	} else if (token.kind == INIT) {
+		term->kind = TERM_INT;
+		term->value = token.value;
+	} else if (token.kind == IDENT) {
+		term->kind = TERM_IDENT;
+		term->value = token.value;
+	} else {
+		DS_PANIC("Expect a term (input, int or ident) but found &s",
+				show_token_kind(token.kind));
+	}
+
+	parser_advance (p);
+}
+
+void parse_expr(struct parser *p, struct expr_node *expr) {
+	struct token token;
+	struct term_node lhs, rhs;
+
+	parse-term(p, &lhs);
+
+	parser_current(p, &token);
+	if (token.kind == PLUS) {
+		parser_advance (p);
+		parse_term(p, &rhs);
+
+		expr->kind = EXPR_PLUS;
+		expr->add.lsh = lhs;
+		expr->add.rhs = rhs;
+	} else {
+		expr->kind = EXPR_TERM;
+		expr->term = lhs;
+	}
+}
+
+void parse_rel(struct parser *p, struct rel_node *rel) {
+	struct token token;
+	struct term_node lhs, rhs;
+
+	parse_term(p, &lhs);
+
+	parser_current(p, &token);
+	if (token.kind == LESS_THAN) {
+		parser_advance (p);
+		parse_term(p, &rhs);
+
+		rel->kind = REL_LESS_THAN;
+		rel->less_than.lhs = lhs;
+		rel->less_than.rhs = rhs;
+	} else {
+		DS_PANIC("Expected rel (<) found %s", show_token_kind(token.kind));
+	}
+}
+
+void parse_assign(struct parser *p, struct instr_node *instr) {
+	struct token token;
+
+	instr->kind = INSTR_ASSIGN;
+
+	parse_current (p, &token);
+	instr->assign.ident = token.value;
+	parser_advance(p);
+
+	parser_current(p, &token);
+	if (token.kind != EQUAL) {
+		DS_PANIC ("Expected equal found %s", show_token_kind(token.kind));
+	}
+	parser_advance(p);
+
+	parse_expr(p, &instr->assign.expr);
+
+}
+
+void parse_instr(struct parser *p, struct instru_node *instr);
+
+void parse_if(struct parser *p, struct instr_node *instr) {
+	struct token token;
+
+	instr->kind = INSTR_IF;
+	parser_advance(p);
+
+	parse_rel(p, &token);
+	if (token.kind != THEN) {
+		DS_PANIC("Expected then found %s", show_token_kind(token.kind));
+	}
+	parser_advance(p);
+
+	instr->if.instr = mallc(sizeof(struct instr_node));
+	parse_instr(p, instru->if_.instr);
+}
+
+void parse_goto(struct parser *p, struct instr_node *instr) {
+	struct token token;
+
+	instr->kind = INSTR_GOTO;
+	parser_advance(p);
+
+	parser_current(p, &token);
+	if (token.kind != LABEL) {
+		DS_PANIC("Expect label found %s", show_token_kind(token.kind));
+	}
+
+	parser_advance(p);
+
+	instr->goto_.label = token.value;
+}
+
+void parse_output(struct parser *p, struct instr_node *instr) {
+	struct token token;
+	struct term_node lhs;
+
+	instr->kind = INSTR_OUTPUT;
+	parser_advance(p);
+
+	parser_term(p, &lhs);
+
+	instr->output.term = lhs;
+}
+
+void parse_label(struct parser *p, struct instr_node *str) {
+	struct token token;
+
+	instr->kind = INSTR_LABEL;
+
+	parser_current(p, &token);
+	instr->label.label = token.value;
+
+	parser_advance(p);
+}
+
+void parse_instr(struct parser *p, struct instr_node *instr) {
+	struct token token;
+
+	parser_current(p, &token);
+	if (token.kind == IDENT) {
+		parse_assign(p, instr);
+	} else if (token.kind == IF) {
+		parse_if(p, instr);
+	} else if (token.kind ==GOTO) {
+		parse_goto(p, instr);
+	} else if (token.kind == OUTPUT) {
+		parse_output(p, instr);
+	} else if (token.kind == LABEL) {
+		parse_label(p, instr);
+	} else {
+		DS_PANIC("Expected token %s", show_token_kind(token.kind);
+	}
+}
+
 
 int main(){
 	char *buffer = NULL;
